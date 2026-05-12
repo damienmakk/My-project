@@ -20,4 +20,5 @@ public class NewComponent : MonoBehaviour
     {
         Debug.Log("Collision Detected!");
     }
+
 }
