@@ -1,46 +1,87 @@
-using UnityEngine;
+using System; // Import standard .NET system types (not strictly needed here but common in C# files)
+using UnityEngine; // Import Unity-specific classes like MonoBehaviour, GameObject, Collider, and print
+using TMPro;
+using Unity.VisualScripting; // Import TextMeshPro namespace for advanced text handling (not used in this script but often included in Unity projects for UI text)
+
 
 public class PlayerScript : MonoBehaviour
 {
-    GameObject currentCollectible;
+    CollectibleScript currentCollectible; // Store the collectible object the player is currently able to interact with
 
-    int collCount = 0;
-    int currentScore = 0;
+    DoorScript currentDoor; // Store the door object the player is currently able to interact with
 
-    void OnTriggerEnter(Collider other)
+    int playerScore = 0; // Keep track of how many points the player has collected so far
+
+    [SerializeField]
+    int targetScore = 0; // The goal score required to complete a task, editable from the Unity Inspector
+
+    [SerializeField]
+    TextMeshProUGUI scoreText; // Reference to the UI text element that displays the player's score
+
+    void Start()
     {
-        if (other.gameObject.tag.Contains("Collectible"))
+        // scoreText.text = "Score: " + playerScore; // Initialize the score display to show the starting score of 0 when the game begins
+    }
+
+    void OnInteract() // Custom interaction method called when the player performs an interact action
+    {
+        if(currentCollectible != null) // Only collect something if the player is currently near a collectible
         {
-            currentCollectible = other.gameObject;
+                playerScore += currentCollectible.collectibleScore; // Add the collectible's score value to the player's total score
+                print("Player has collected " + playerScore + " points"); // Print the updated score to the console for debugging or feedback
+                scoreText.text = "Score: " + playerScore; // Update the on-screen score display to reflect the new score after collecting an item
+                currentCollectible.Collect(); // Call the Collect method on the collectible script to handle its collection logic
+                currentCollectible = null; // Clear the reference so the player no longer has an active collectible selected 
+        }
+        else
+        {
+                print("Error: No CollectibleScript found on "); // Log an error in the Unity Console if the collectible is missing its data component
+                //return; // Exit the method early because we cannot safely collect the item without the script
+        }
+         if(currentDoor != null) // Only interact with a door if the player is currently near one
+         {
+             DoorScript doorScript = currentDoor.GetComponentInParent<DoorScript>(); // Find the door script on the door object or its parents
+            if(doorScript != null) // Check if the door script was found successfully
+            {
+                currentDoor.Interact();
+            }
+            else
+            {
+                print("Error: No DoorScript found on ");
+                //return;
+            }
+         }
+    }
+
+    void OnTriggerEnter(Collider other) // Unity event called when another collider enters this GameObject's trigger collider
+    {
+        if(other.gameObject.tag == "Collectible") // Check if the object entering the trigger is tagged as a collectible
+        {
+            currentCollectible = other.GetComponentInParent<CollectibleScript>(); // Store the collectible script so the player can interact with it later
         }
 
-        if (other.gameObject.tag == "GoalArea" && collCount >= 7)
+         if(other.gameObject.tag == "Door") // Check if the object entering the trigger is tagged as a door
+         {
+             currentDoor = other.GetComponentInParent<DoorScript>(); // Store the door script so the player can interact with it later
+         }
+
+        if(other.gameObject.tag == "GoalArea" && playerScore >= targetScore) // Check if the player entered the goal area and has enough points
         {
-            print("Player entered trigger zone with " + collCount + " collectibles");
+            print("Player entered trigger zone with " + playerScore + " points"); // Print a success message when the player reaches the goal with enough score
         }
     }
 
-    void OnTriggerExit(Collider other)
+    void OnTriggerExit(Collider other) // Unity event called when another collider leaves this GameObject's trigger collider
     {
-        if (other.gameObject == currentCollectible)
+        if(other.gameObject == currentCollectible) // If the collectible leaving the trigger is the one we were tracking
         {
-            currentCollectible = null;
+            currentCollectible = null; // Clear the current collectible because it is no longer in range
+        }
+
+        if(other.gameObject == currentDoor) // If the door leaving the trigger is the one we were tracking
+        {
+            currentDoor = null; // Clear the current door because it is no longer in range
         }
     }
 
-    void OnInteract()
-    {
-        if (currentCollectible != null)
-        {
-            currentScore += currentCollectible.GetComponent<CollectibleScript>().collectibleScore;
-
-            ++collCount;
-
-            print("Current score: " + currentScore);
-
-            Destroy(currentCollectible);
-
-            currentCollectible = null;
-        }
-    }
 }
